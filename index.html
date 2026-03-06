@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>少年禪修錄 - 圖片強化版</title>
+    <title>少年禪修錄 - 完整情境版</title>
     <style>
         :root { --ink: #2C2C2C; --paper: #F2EFE9; --gold: #C5A059; --zen: #3D4F40; }
         body { margin: 0; background: #1a1a1a; font-family: "PingFang TC", serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
@@ -13,12 +13,13 @@
         .stat-box { background: #fff; border: 1px solid var(--gold); text-align: center; padding: 3px; border-radius: 5px; font-size: 13px; }
         .stat-val { font-weight: bold; color: var(--zen); }
         #display-area { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-        #dialogue { background: rgba(255,255,255,0.8); padding: 10px; border-radius: 8px; font-size: 15px; border: 1px solid #ddd; min-height: 40px; }
+        #dialogue { background: rgba(255,255,255,0.8); padding: 10px; border-radius: 8px; font-size: 15px; border: 1px solid #ddd; min-height: 45px; line-height: 1.4; }
         #action-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        .menu-btn { background: var(--zen); color: white; border: none; padding: 10px; border-radius: 5px; font-size: 14px; }
+        .menu-btn { background: var(--zen); color: white; border: none; padding: 12px 5px; border-radius: 5px; font-size: 14px; cursor: pointer; }
+        .menu-btn.bad { background: #A63D40; }
         .controls { position: absolute; right: 10px; top: -145px; display: grid; grid-template-columns: repeat(3, 46px); gap: 5px; }
-        .btn { width: 46px; height: 46px; background: rgba(255,255,255,0.8); border: 1.5px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; }
-        #scene-title { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 12px; border-radius: 15px; font-size: 13px; }
+        .btn { width: 46px; height: 46px; background: rgba(255,255,255,0.8); border: 1.5px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; user-select: none; }
+        #scene-title { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 12px; border-radius: 15px; font-size: 13px; z-index: 10; }
     </style>
 </head>
 <body>
@@ -38,7 +39,7 @@
         <div class="stat-box">行 <span class="stat-val" id="x">10</span></div>
     </div>
     <div id="display-area">
-        <div id="dialogue"><b>【系統】</b> 正在同步修行進度... 若圖片未出現請稍候。</div>
+        <div id="dialogue"><b>【系統】</b> 走近場景中的物件，會自動跳出修行選項。</div>
         <div id="action-menu"></div>
     </div>
 </div>
@@ -47,17 +48,12 @@
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
 
-    // 1. 圖片載入清單 (加上隨機參數避免快取問題)
-    const v = "?v=" + Math.random(); 
+    // --- 圖片定義 (與您的檔名一致) ---
+    const v = "?v=" + Date.now();
     const images = {
-        boy: new Image(),
-        niche: new Image(),
-        burner: new Image(),
-        futon: new Image(),
-        bookcase: new Image(),
-        standBuddha: new Image(),
-        garden: new Image(),
-        tree: new Image()
+        boy: new Image(), niche: new Image(), burner: new Image(),
+        futon: new Image(), bookcase: new Image(),
+        standBuddha: new Image(), garden: new Image(), tree: new Image()
     };
     images.boy.src = 'boy.png' + v;
     images.niche.src = 'buddhist niche.png' + v;
@@ -68,7 +64,7 @@
     images.garden.src = 'garden.png' + v;
     images.tree.src = 'tree.png' + v;
 
-    let s = JSON.parse(localStorage.getItem('zen_v12')) || { d:10, w:10, f:10, x:10 };
+    let s = JSON.parse(localStorage.getItem('zen_v13')) || { d:10, w:10, f:10, x:10 };
     let player = { x: 150, y: 150 };
     let currentScene = 'world';
 
@@ -83,8 +79,9 @@
             { x: 150, y: 80, w: 60, h: 40, color: '#8B4513', label: '書桌', type: 'study' }
         ]},
         temple: { bg: '#4a2211', name: '大雄寶殿', objs: [
-            { x: 130, y: 20, w: 100, h: 100, img: images.niche, label: '佛龕', type: 'buddha' },
+            { x: 130, y: 20, w: 100, h: 100, img: images.niche, label: '佛像', type: 'buddha' },
             { x: 165, y: 110, w: 40, h: 30, img: images.burner, label: '香爐', type: 'incense' },
+            { x: 20, y: 20, w: 50, h: 50, color: '#ADD8E6', label: '窗戶', type: 'window' },
             { x: 100, y: 150, w: 40, h: 20, img: images.futon, label: '蒲團', type: 'sit' }
         ]},
         backhill: { bg: '#3a5a3a', name: '後山', objs: [
@@ -104,14 +101,13 @@
             if (obj.img && obj.img.complete && obj.img.naturalWidth !== 0) {
                 ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
             } else {
-                ctx.fillStyle = obj.color || "rgba(255,255,255,0.3)";
+                ctx.fillStyle = obj.color || "rgba(255,255,255,0.2)";
                 ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
             }
             ctx.fillStyle = "#fff";
             ctx.fillText(obj.label, obj.x, obj.y - 5);
         });
 
-        // 畫主角
         if (images.boy.complete && images.boy.naturalWidth !== 0) {
             ctx.drawImage(images.boy, player.x - 20, player.y - 45, 40, 50);
         } else {
@@ -137,7 +133,7 @@
         const sc = mapData[currentScene];
         let found = false;
         sc.objs.forEach(obj => {
-            if (player.x > obj.x-25 && player.x < obj.x+obj.w+25 && player.y > obj.y-25 && player.y < obj.y+obj.h+25) {
+            if (player.x > obj.x-30 && player.x < obj.x+obj.w+30 && player.y > obj.y-30 && player.y < obj.y+obj.h+30) {
                 showMenu(obj); found = true;
             }
         });
@@ -149,26 +145,65 @@
 
     function showMenu(obj) {
         const menu = document.getElementById('action-menu');
-        if(menu.getAttribute('data-active') === obj.type) return;
+        if(menu.getAttribute('data-active') === (obj.type || obj.label)) return;
         menu.innerHTML = "";
-        menu.setAttribute('data-active', obj.type);
-        let options = [];
-        if(obj.to) options.push({n: `進入${obj.label}`, fn: () => { currentScene=obj.to; player.y=canvas.height-40; draw(); }});
-        if(obj.type === 'buddha') options.push({n: "禮佛", fn: () => update('d',10,'禮佛一拜。')});
-        if(obj.type === 'garden') options.push({n: "澆水", fn: () => update('f',5,'勤勞澆水。')});
+        menu.setAttribute('data-active', (obj.type || obj.label));
 
-        options.forEach(opt => {
+        let opts = [];
+        if(obj.to) opts.push({n: `進入${obj.label}`, fn: () => { currentScene=obj.to; player.y=canvas.height-40; draw(); }});
+        
+        // --- 大殿情境 ---
+        if(obj.type === 'buddha') {
+            opts.push({n: "禮佛 (+10)", fn: () => update('d',10,'禮佛一拜。')});
+            opts.push({n: "拜懺 (+10)", fn: () => update('d',10,'至誠拜懺。')});
+            opts.push({n: "擦佛像 (+5)", fn: () => update('f',5,'勤拭佛像。')});
+            opts.push({n: "哈哈大笑 (-5)", fn: () => update('d',-5,'殿內喧嘩。', true)});
+        }
+        if(obj.type === 'incense') {
+            opts.push({n: "整理香爐 (+5)", fn: () => update('f',5,'整理香爐。')});
+            opts.push({n: "上香 (+5)", fn: () => update('f',5,'上香供養。')});
+        }
+        if(obj.type === 'window') {
+            opts.push({n: "擦窗戶 (+5)", fn: () => update('f',5,'擦拭窗戶。')});
+            opts.push({n: "滑手機 (-5)", fn: () => update('w',-5,'虛度光陰。', true)});
+        }
+        if(obj.type === 'sit') {
+            opts.push({n: "打坐 (+10)", fn: () => update('d',10,'打坐觀心。')});
+            opts.push({n: "翹腳 (-5)", fn: () => update('x',-5,'威儀不整。', true)});
+        }
+
+        // --- 後山情境 ---
+        if(obj.type === 'stand_buddha') {
+            opts.push({n: "洗佛像 (+10)", fn: () => update('f',10,'清淨佛身。')});
+        }
+        if(obj.type === 'garden') {
+            opts.push({n: "整理菜園 (+5)", fn: () => update('f',5,'整理菜園。')});
+            opts.push({n: "澆水 (+5)", fn: () => update('f',5,'澆水修行。')});
+            opts.push({n: "拔草 (+5)", fn: () => update('f',5,'拔除雜草。')});
+        }
+        if(obj.type === 'tree') {
+            opts.push({n: "掃落葉 (+5)", fn: () => update('f',5,'掃除落葉。')});
+            opts.push({n: "樹下睡覺 (-5)", fn: () => update('x',-5,'偷懶睡覺。', true)});
+            opts.push({n: "搶工具 (-5)", fn: () => update('x',-5,'心生慢心。', true)});
+        }
+        
+        // --- 藏經閣情境 ---
+        if(obj.type === 'books') {
+            opts.push({n: "背誦經文 (+5)", fn: () => update('w',5,'研讀經典。')});
+        }
+
+        opts.forEach(o => {
             const b = document.createElement('button');
-            b.className = "menu-btn";
-            b.innerText = opt.n;
-            b.onclick = opt.fn;
+            b.className = "menu-btn" + (o.bad ? " bad" : "");
+            b.innerText = o.n;
+            b.onclick = o.fn;
             menu.appendChild(b);
         });
     }
 
-    function update(type, val, msg) {
+    function update(type, val, msg, isBad = false) {
         s[type] += val;
-        log(`<b>【修行】</b>${msg}`);
+        log(isBad ? `<span style="color:red">【事件】${msg}</span>` : `<b>【修行】</b>${msg}`);
         updateUI();
     }
 
@@ -179,7 +214,7 @@
         document.getElementById('w').innerText = Math.floor(s.w);
         document.getElementById('f').innerText = Math.floor(s.f);
         document.getElementById('x').innerText = Math.floor(s.x);
-        localStorage.setItem('zen_v12', JSON.stringify(s));
+        localStorage.setItem('zen_v13', JSON.stringify(s));
     }
 
     function init() {
@@ -187,10 +222,9 @@
         canvas.height = window.innerHeight * 0.5;
         draw();
     }
-
     window.addEventListener('resize', init);
     init();
-    setInterval(draw, 500); // 持續檢查圖片是否載入
+    setInterval(draw, 600);
 </script>
 </body>
 </html>
