@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>少年禪修錄 v3</title>
+    <style>
+        :root {
+            --ink: #2C2C2C;
+            --paper: #F2EFE9;
+            --gold: #C5A059;
+            --zen-green: #3D4F40;
+            --demon-red: #8B0000;
+        }
+
+        body {
+            font-family: "PingFang TC", "STKaiti", serif;
+            background-color: #D4C4A8;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .scroll-container {
+            width: 100%;
+            max-width: 450px;
+            background: var(--paper);
+            border-left: 12px solid #8B4513;
+            border-right: 12px solid #8B4513;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-height: 90vh;
+            box-sizing: border-box;
+        }
+
+        h2 { text-align: center; color: var(--zen-green); letter-spacing: 5px; margin-top: 0; }
+
+        .status-bar {
+            background: rgba(197, 160, 89, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px dashed var(--gold);
+        }
+
+        .level-badge {
+            background: var(--gold);
+            color: white;
+            padding: 2px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat-label { font-size: 14px; color: #666; }
+        .stat-val { font-weight: bold; color: var(--ink); font-size: 18px; }
+
+        #demon-alert {
+            background: #ffe6e6;
+            color: var(--demon-red);
+            padding: 8px;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: none;
+            animation: flash 1.5s infinite;
+        }
+
+        @keyframes flash { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .actions { display: grid; gap: 10px; }
+        button {
+            background: var(--zen-green);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #2a382d;
+        }
+        button:active { transform: translateY(2px); box-shadow: none; }
+
+        #event-log {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            font-style: italic;
+            color: #555;
+            min-height: 60px;
+            border: 1px solid #eee;
+            line-height: 1.6;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="scroll-container">
+    <div style="text-align: center;">
+        <div class="level-badge" id="level-text">小男生</div>
+    </div>
+    <h2>少年禪修錄</h2>
+    
+    <div class="status-bar">
+        <div style="text-align: center; margin-bottom: 10px; font-weight: bold;">
+            修行第 <span id="day-val" style="color:var(--gold); font-size: 20px;">1</span> / 60 天
+        </div>
+        <div class="stat-grid">
+            <div><span class="stat-label">定力：</span><span class="stat-val" id="ding">10</span></div>
+            <div><span class="stat-label">智慧：</span><span class="stat-val" id="wis">10</span></div>
+            <div><span class="stat-label">福德：</span><span class="stat-val" id="fu">10</span></div>
+            <div><span class="stat-label">行持：</span><span class="stat-val" id="xing">10</span></div>
+        </div>
+    </div>
+
+    <div id="demon-alert">⚠️ 心魔叢生：過於傲慢，將損修行！</div>
+
+    <div class="actions">
+        <button onclick="doZen('meditate')">🧘 靜坐 (定力+3)</button>
+        <button onclick="doZen('chant')">📜 誦經 (智慧+5)</button>
+        <button onclick="doZen('bow')">🙏 禮佛 (智慧+5, 福德+5)</button>
+        <button onclick="doZen('work')">🧹 出坡 (福德+4)</button>
+        <button onclick="doZen('reflect')">🕯️ 觀照 (行持+4)</button>
+    </div>
+
+    <div id="event-log">「菩提本無樹，明鏡亦非台。」🌿</div>
+
+    <div class="footer">
+        進度將自動儲存於此瀏覽器<br><br>
+        <span onclick="resetGame()" style="cursor:pointer; text-decoration: underline;">重置所有修行進度</span>
+    </div>
+</div>
+
+<script>
+    let state = JSON.parse(localStorage.getItem('zen_save_v3')) || {
+        day: 1, ding: 10, wis: 10, fu: 10, xing: 10, level: "小男生", demon: 0
+    };
+
+    function updateUI(msg) {
+        document.getElementById('day-val').innerText = state.day;
+        document.getElementById('ding').innerText = state.ding;
+        document.getElementById('wis').innerText = state.wis;
+        document.getElementById('fu').innerText = state.fu;
+        document.getElementById('xing').innerText = state.xing;
+        document.getElementById('level-text').innerText = state.level;
+        if(msg) document.getElementById('event-log').innerText = msg;
+        document.getElementById('demon-alert').style.display = state.demon > 40 ? 'block' : 'none';
+        localStorage.setItem('zen_save_v3', JSON.stringify(state));
+    }
+
+    function checkLevel() {
+        const stats = [state.ding, state.wis, state.fu, state.xing];
+        const max = Math.max(...stats);
+        let newLevel = "小男生";
+        
+        if (state.ding >= 400 && state.wis >= 400 && state.fu >= 400 && state.xing >= 400) newLevel = "總長";
+        else if (stats.filter(s => s >= 200).length >= 3) newLevel = "學長";
+        else if (max > 100) newLevel = "研經班";
+        else if (max > 80) newLevel = "高級班";
+        else if (max > 40) newLevel = "中級班";
+        else if (max > 20) newLevel = "初級班";
+
+        if (newLevel !== state.level) {
+            state.level = newLevel;
+            alert(`✨ 晉升！你現在是「${newLevel}」了。`);
+        }
+    }
+
+    function doZen(type) {
+        if (state.day > 60) return;
+
+        switch(type) {
+            case 'meditate': state.ding += 3; break;
+            case 'chant': state.wis += 5; break;
+            case 'bow': state.wis += 5; state.fu += 5; break;
+            case 'work': state.fu += 4; break;
+            case 'reflect': state.xing += 4; break;
+        }
+
+        if (state.ding > 50 || state.wis > 50) state.demon += Math.floor(Math.random() * 10);
+
+        let eventMsg = generateEvent();
+        
+        if (state.demon > 80) {
+            eventMsg = "🏮【心魔爆發】你陷入了傲慢。智慧 -10，行持 -5。";
+            state.wis -= 10; state.xing -= 5;
+            state.demon = 0;
+        }
+
+        state.day++;
+        checkLevel();
+        updateUI(eventMsg);
+        if (state.day > 60) endGame();
+    }
+
+    function generateEvent() {
+        const r = Math.random();
+        if (r < 0.003) {
+            state.ding += 30; state.wis += 30; state.fu += 30; state.xing += 30;
+            return "🌟 瞬間開悟！全屬性 +30！";
+        }
+        if (r < 0.1) { state.wis += 8; return "📜 聽經聞法：智慧 +8"; }
+        if (r < 0.2) { state.fu += 6; return "🤝 廣結善緣：福德 +6"; }
+        if (r < 0.3) { state.ding -= 5; return "💤 昏沉瞌睡：定力 -5"; }
+        if (r < 0.4) { state.xing += 7; return "🧹 掃地觀心：行持 +7"; }
+        return "🌅 又是清淨的一天。";
+    }
+
+    function endGame() {
+        const {ding, wis, fu, xing} = state;
+        const max = Math.max(ding, wis, fu, xing);
+        let ending = "護法會";
+        if (ding >= 400 && wis >= 400 && fu >= 400 && xing >= 400) ending = "明心見性";
+        else if (ding >= 250 && wis >= 250 && fu >= 250 && xing >= 250) ending = "菩薩行者";
+        else if (ding >= 150 && wis >= 150 && fu >= 150 && xing >= 150) ending = "發菩提心";
+        else if (max === wis) ending = "大乘解行";
+        else if (max === fu) ending = "五明菩薩";
+        else if (max === ding) ending = "禪七行者";
+
+        alert(`【修行期滿】\n結局：${ending}`);
+        resetGame(true);
+    }
+
+    function resetGame(silent = false) {
+        if (silent || confirm("確定重置？")) {
+            localStorage.removeItem('zen_save_v3');
+            location.reload();
+        }
+    }
+
+    updateUI();
+</script>
+</body>
+</html>
