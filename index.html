@@ -3,25 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>少年禪修錄 - 全場景版</title>
+    <title>少年禪修錄 - 深度情境版</title>
     <style>
-        body { margin: 0; background: #000; font-family: "PingFang TC", serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
-        #game-canvas { background: #71aa34; display: block; width: 100%; height: 60%; touch-action: none; cursor: crosshair; }
-        #ui-panel { flex: 1; background: #F2EFE9; padding: 10px; border-top: 4px solid #8B4513; display: flex; flex-direction: column; position: relative; }
+        :root { --ink: #2C2C2C; --paper: #F2EFE9; --gold: #C5A059; --zen: #3D4F40; }
+        body { margin: 0; background: #1a1a1a; font-family: "PingFang TC", serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* 遊戲畫布 */
+        #game-canvas { background: #71aa34; display: block; width: 100%; height: 50%; touch-action: none; }
+        
+        /* 介面板塊 */
+        #ui-panel { flex: 1; background: var(--paper); border-top: 4px solid #8B4513; display: flex; flex-direction: column; padding: 10px; position: relative; box-sizing: border-box; }
+        
+        /* 屬性列 */
         .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 5px; }
-        .stat-box { background: #fff; border: 1px solid #C5A059; text-align: center; padding: 5px; border-radius: 5px; }
-        .stat-val { font-size: 16px; font-weight: bold; color: #3D4F40; display: block; }
-        .stat-label { font-size: 10px; color: #888; }
-        #dialogue { flex: 1; background: rgba(255,255,255,0.8); border-radius: 8px; padding: 12px; font-size: 15px; overflow-y: auto; border: 1px solid #ddd; }
-        .controls { position: absolute; right: 15px; top: -160px; display: grid; grid-template-columns: repeat(3, 55px); gap: 8px; z-index: 100; }
-        .btn { width: 55px; height: 55px; background: rgba(255,255,255,0.7); border: 2px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; }
-        .btn:active { background: #C5A059; color: white; }
-        #scene-name { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 2px 12px; border-radius: 15px; font-size: 14px; z-index: 50; }
+        .stat-box { background: #fff; border: 1px solid var(--gold); text-align: center; padding: 3px; border-radius: 5px; font-size: 13px; }
+        .stat-val { font-weight: bold; color: var(--zen); }
+
+        /* 劇情與選單區 */
+        #display-area { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+        #dialogue { background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px; font-size: 15px; border: 1px solid #ddd; min-height: 50px; }
+        #action-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        
+        /* 按鈕樣式 */
+        .menu-btn { background: var(--zen); color: white; border: none; padding: 10px; border-radius: 5px; font-size: 14px; cursor: pointer; }
+        .menu-btn:active { background: var(--gold); }
+        .exit-btn { background: #8B4513; grid-column: span 2; }
+
+        /* 控制按鈕 */
+        .controls { position: absolute; right: 10px; top: -140px; display: grid; grid-template-columns: repeat(3, 45px); gap: 5px; }
+        .btn { width: 45px; height: 45px; background: rgba(255,255,255,0.8); border: 1.5px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; }
+
+        #scene-title { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<div id="scene-name">院落步道</div>
+<div id="scene-title">院落步道</div>
 <canvas id="game-canvas"></canvas>
 
 <div id="ui-panel">
@@ -29,70 +46,77 @@
         <div></div><div class="btn" onclick="move(0,-20)">↑</div><div></div>
         <div class="btn" onclick="move(-20,0)">←</div><div class="btn" onclick="move(0,20)">↓</div><div class="btn" onclick="move(20,0)">→</div>
     </div>
-    
+
     <div class="stats">
-        <div class="stat-box"><span class="stat-val" id="d">10</span><span class="stat-label">定力</span></div>
-        <div class="stat-box"><span class="stat-val" id="w">10</span><span class="stat-label">智慧</span></div>
-        <div class="stat-box"><span class="stat-label">福德</span><span class="stat-val" id="f">10</span></div>
-        <div class="stat-box"><span class="stat-label">行持</span><span class="stat-val" id="x">10</span></div>
+        <div class="stat-box">定 <span class="stat-val" id="d">10</span></div>
+        <div class="stat-box">智 <span class="stat-val" id="w">10</span></div>
+        <div class="stat-box">福 <span class="stat-val" id="f">10</span></div>
+        <div class="stat-box">行 <span class="stat-val" id="x">10</span></div>
+    </div>
+
+    <div id="display-area">
+        <div id="dialogue"><b>【引導】</b> 走進建築物開始修行。左上：藏經閣 | 中上：大殿 | 右下：後山。</div>
+        <div id="action-menu"></div>
     </div>
     
-    <div id="dialogue"><b>【師父】</b> 修行之路始於足下。走進不同場景建築，觸發不同支線修行。</div>
-    <div style="text-align:center; font-size:12px; color:#999; margin-top:5px;" id="lvl-info">等級：小男生 | 修行中...</div>
+    <div style="text-align:center; font-size:11px; color:#888; margin-top:5px;" id="lvl-info">境界：小男生</div>
 </div>
 
 <script>
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
-    
-    let s = JSON.parse(localStorage.getItem('zen_rpg_final')) || { d:10, w:10, f:10, x:10, lvl:"小男生", day:1 };
-    let player = { x: 100, y: 150 };
-    let currentScene = 'main';
+    let s = JSON.parse(localStorage.getItem('zen_rpg_v5')) || { d:10, w:10, f:10, x:10, lvl:"小男生" };
+    let player = { x: 150, y: 150 };
+    let currentScene = 'world'; // world, library, temple, backhill
 
-    const maps = {
-        main: {
-            color: '#71aa34', name: '院落步道',
-            portals: [
-                { x: 150, y: 20, w: 80, h: 40, to: 'temple', label: '大殿', c: '#8B4513' },
-                { x: 30, y: 50, w: 60, h: 60, to: 'library', label: '藏經閣', c: '#5D6D5E' },
-                { x: 250, y: 180, w: 80, h: 60, to: 'backhill', label: '後山', c: '#A0522D' },
-                { x: 20, y: 180, w: 60, h: 40, to: 'hall', label: '圓通寶殿', c: '#FFD700' }
+    // 場景設定
+    const map = {
+        world: {
+            bg: '#71aa34',
+            objects: [
+                { x: 30, y: 30, w: 70, h: 60, color: '#5D6D5E', label: '藏經閣', to: 'library' },
+                { x: 160, y: 20, w: 90, h: 70, color: '#8B4513', label: '大殿', to: 'temple' },
+                { x: 250, y: 160, w: 80, h: 70, color: '#225522', label: '後山', to: 'backhill' }
             ]
         },
-        temple: { color: '#442211', name: '大殿禪堂', back: {x:180, y:200}, text: '香霧繚繞，定力提升中...' },
-        library: { color: '#3d3d3d', name: '藏經閣', back: {x:60, y:150}, text: '翻閱經典，心生智慧...' },
-        backhill: { color: '#225522', name: '後山庭院', back: {x:280, y:150}, text: '掃地出坡，勤種福德...' },
-        hall: { color: '#554400', name: '圓通寶殿', back: {x:50, y:150}, text: '至誠禮拜，感應道交...' }
+        library: { bg: '#e5d5b5', name: '藏經閣' },
+        temple: { bg: '#4a2211', name: '大雄寶殿' },
+        backhill: { bg: '#3a5a3a', name: '後山' }
     };
 
     function draw() {
-        const scene = maps[currentScene];
-        document.getElementById('scene-name').innerText = scene.name;
-        
-        // 畫背景
-        ctx.fillStyle = scene.color;
+        const sc = map[currentScene];
+        document.getElementById('scene-title').innerText = sc.name || "院落步道";
+        ctx.fillStyle = sc.bg || sc;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 畫裝飾 (主地圖有傳送門)
-        if (currentScene === 'main') {
-            scene.portals.forEach(p => {
-                ctx.fillStyle = p.c;
-                ctx.fillRect(p.x, p.y, p.w, p.h);
+        if (currentScene === 'world') {
+            sc.objects.forEach(obj => {
+                ctx.fillStyle = obj.color;
+                ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
                 ctx.fillStyle = "white";
-                ctx.fillText(p.label, p.x + 10, p.y + 25);
+                ctx.fillText(obj.label, obj.x+10, obj.y+30);
             });
-        } else {
-            // 室內畫一個出口
-            ctx.fillStyle = "rgba(255,255,255,0.3)";
-            ctx.fillRect(10, canvas.height - 40, 60, 30);
-            ctx.fillStyle = "white";
-            ctx.fillText("離開", 20, canvas.height - 20);
+        } else if (currentScene === 'library') {
+            // 畫桌椅與書櫃
+            ctx.fillStyle = "#654321";
+            ctx.fillRect(20, 20, 15, 100); // 書櫃1
+            ctx.fillRect(50, 20, 15, 100); // 書櫃2
+            ctx.fillStyle = "#8B4513";
+            ctx.fillRect(150, 80, 40, 25); // 桌子
+            ctx.fillRect(160, 110, 20, 15); // 椅子
+        } else if (currentScene === 'temple') {
+            // 畫大佛位子
+            ctx.fillStyle = "#FFD700";
+            ctx.beginPath(); ctx.arc(canvas.width/2, 60, 30, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = "#8B4513";
+            ctx.fillRect(canvas.width/2-40, 100, 80, 20); // 供桌
         }
 
         // 畫玩家
-        ctx.fillStyle = "#ffdbac"; // 臉
+        ctx.fillStyle = "#ffdbac";
         ctx.beginPath(); ctx.arc(player.x, player.y - 15, 10, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = s.lvl === "小男生" ? "#888" : "#C5A059"; // 衣服
+        ctx.fillStyle = (s.lvl === "小男生") ? "#888" : "#C5A059";
         ctx.fillRect(player.x - 12, player.y - 5, 24, 20);
     }
 
@@ -101,46 +125,83 @@
         player.x = Math.max(20, Math.min(player.x, canvas.width-20));
         player.y = Math.max(20, Math.min(player.y, canvas.height-20));
         
-        checkCollision();
+        if (currentScene === 'world') {
+            map.world.objects.forEach(obj => {
+                if (player.x > obj.x && player.x < obj.x + obj.w && player.y > obj.y && player.y < obj.y + obj.h) {
+                    enterScene(obj.to);
+                }
+            });
+        }
         draw();
     }
 
-    function checkCollision() {
-        if (currentScene === 'main') {
-            maps.main.portals.forEach(p => {
-                if (player.x > p.x && player.x < p.x + p.w && player.y > p.y && player.y < p.y + p.h) {
-                    currentScene = p.to;
-                    player.x = canvas.width/2; player.y = canvas.height - 50;
-                    log(`進入 ${maps[p.to].name}`);
-                }
+    function enterScene(sceneId) {
+        currentScene = sceneId;
+        player.x = canvas.width/2; player.y = canvas.height-40;
+        updateMenu();
+        const scName = map[sceneId].name;
+        log(`進入了${scName}。`);
+    }
+
+    function updateMenu() {
+        const menu = document.getElementById('action-menu');
+        menu.innerHTML = "";
+        
+        if (currentScene === 'library') {
+            const books = ["心經", "七週緣慈", "大悲咒", "楞嚴咒", "金剛經"];
+            books.forEach(b => {
+                const btn = document.createElement('button');
+                btn.className = "menu-btn";
+                btn.innerText = "誦持 " + b;
+                btn.onclick = () => studyBook(b);
+                menu.appendChild(btn);
             });
-        } else {
-            // 修行邏輯與離開邏輯
-            if (player.x < 70 && player.y > canvas.height - 50) {
-                const backPos = maps[currentScene].back;
-                currentScene = 'main';
-                player.x = backPos.x; player.y = backPos.y;
-            } else {
-                // 具體修行屬性 (依照場景)
-                if (currentScene === 'temple') s.d += 1;
-                if (currentScene === 'library') s.w += 1;
-                if (currentScene === 'backhill') s.f += 1;
-                if (currentScene === 'hall') { s.d+=0.5; s.w+=0.5; s.f+=0.5; }
-                
-                // 隨機事件 (依照文件)
-                const r = Math.random();
-                if(r < 0.003) { 
-                    s.d+=30; s.w+=30; s.f+=30; s.x+=30; 
-                    alert("🌟【開悟瞬間】一瞬間，你明白了什麼。全屬性+30！");
-                } else if(r < 0.01) {
-                    s.w -= 5; log("❌【事件】上課遲到，智慧下降。");
-                }
-                
-                log(maps[currentScene].text);
-            }
+        } else if (currentScene === 'temple') {
+            const actions = ["虔誠靜坐", "大禮拜", "清理香爐"];
+            actions.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = "menu-btn";
+                btn.innerText = a;
+                btn.onclick = () => templeAction(a);
+                menu.appendChild(btn);
+            });
+        } else if (currentScene === 'backhill') {
+            const actions = ["揮帚掃葉", "挑水修行", "修剪草木"];
+            actions.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = "menu-btn";
+                btn.innerText = a;
+                btn.onclick = () => workAction(a);
+                menu.appendChild(btn);
+            });
         }
+
+        if (currentScene !== 'world') {
+            const exit = document.createElement('button');
+            exit.className = "menu-btn exit-btn";
+            exit.innerText = "🔙 離開此處";
+            exit.onclick = () => { currentScene = 'world'; updateMenu(); log("回到院落。"); draw(); };
+            menu.appendChild(exit);
+        }
+    }
+
+    function studyBook(name) {
+        const r = Math.random();
+        let msg = `你開始研讀《${name}》。`;
+        
+        if (r < 0.1) { s.w -= 5; msg += " 糟糕！上課遲到了，智慧-5。"; }
+        else if (r < 0.3) { s.w += 5; msg += " 認真背經，長養智慧，智慧+5。"; }
+        else if (r < 0.4) { s.w += 5; s.x += 5; msg += " 認真寫作業，智慧與行持+5。"; }
+        else if (r < 0.5) { s.w -= 10; msg += " 心神不寧，背經錯亂，智慧-10！"; }
+        else if (r < 0.55) { s.w += 20; msg += " 考試全對！師父露出滿意的微笑。智慧+20。"; }
+        else { s.w += 2; msg += " 平穩地誦讀了一遍。"; }
+        
+        log(msg);
         updateUI();
     }
+
+    function templeAction(a) { s.d += 3; s.f += 1; log(`你在佛前${a}，身心安定。`); updateUI(); }
+    function workAction(a) { s.f += 4; s.x += 2; log(`在後山${a}，福德增長。`); updateUI(); }
 
     function log(m) { document.getElementById('dialogue').innerHTML = `<b>【記錄】</b> ${m}`; }
 
@@ -150,35 +211,25 @@
         document.getElementById('f').innerText = Math.floor(s.f);
         document.getElementById('x').innerText = Math.floor(s.x);
         
-        // 境界判定 (依照文件)
         const max = Math.max(s.d, s.w, s.f, s.x);
-        const count200 = [s.d,s.w,s.f,s.x].filter(v=>v>=200).length;
-        const count400 = [s.d,s.w,s.f,s.x].filter(v=>v>=400).length;
-
-        let newLvl = "小男生";
-        if (count400 >= 3) newLvl = "總長";
-        else if (count200 >= 3) newLvl = "學長";
-        else if (max > 100) newLvl = "研經班";
-        else if (max > 80) newLvl = "高級班";
-        else if (max > 40) newLvl = "中級班";
-        else if (max > 20) newLvl = "初級班";
-
-        if(newLvl !== s.lvl) {
-            s.lvl = newLvl;
-            alert(`✨ 境界提升：${newLvl}！\n師父說：你可以進入新班級修學了。`);
-        }
-        document.getElementById('lvl-info').innerText = `等級：${s.lvl} | 修行進行中`;
-        localStorage.setItem('zen_rpg_final', JSON.stringify(s));
+        if(max > 400) s.lvl = "總長";
+        else if(max > 200) s.lvl = "學長";
+        else if(max > 100) s.lvl = "研經班";
+        else if(max > 40) s.lvl = "中級班";
+        
+        document.getElementById('lvl-info').innerText = `境界：${s.lvl}`;
+        localStorage.setItem('zen_rpg_v5', JSON.stringify(s));
     }
 
     function init() {
         canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight * 0.6;
+        canvas.height = window.innerHeight * 0.5;
         draw();
     }
 
     window.addEventListener('resize', init);
     init();
+    updateMenu();
     updateUI();
 </script>
 </body>
