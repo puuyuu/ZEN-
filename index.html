@@ -1,20 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>少年禪修錄 - 最終修正版</title>
+    <style>
+        :root { --ink: #2C2C2C; --paper: #F2EFE9; --gold: #C5A059; --zen: #3D4F40; }
+        body { margin: 0; background: #000; font-family: "PingFang TC", serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        #game-canvas { background: #71aa34; display: block; width: 100%; height: 50%; touch-action: none; }
+        #ui-panel { flex: 1; background: var(--paper); border-top: 4px solid #8B4513; display: flex; flex-direction: column; padding: 10px; box-sizing: border-box; position: relative; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 5px; }
+        .stat-box { background: #fff; border: 1px solid var(--gold); text-align: center; padding: 3px; border-radius: 5px; font-size: 13px; }
+        .stat-val { font-weight: bold; color: var(--zen); }
+        #display-area { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+        #dialogue { background: rgba(255,255,255,0.8); padding: 10px; border-radius: 8px; font-size: 15px; border: 1px solid #ddd; min-height: 40px; line-height: 1.4; }
+        #action-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .menu-btn { background: var(--zen); color: white; border: none; padding: 12px 5px; border-radius: 5px; font-size: 14px; cursor: pointer; }
+        .controls { position: absolute; right: 10px; top: -150px; display: grid; grid-template-columns: repeat(3, 48px); gap: 5px; }
+        .btn { width: 48px; height: 48px; background: rgba(255,255,255,0.8); border: 1.5px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; }
+        #scene-title { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 12px; border-radius: 15px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div id="scene-title">院落步道</div>
+<canvas id="game-canvas"></canvas>
+
+<div id="ui-panel">
+    <div class="controls">
+        <div></div><div class="btn" onclick="move(0,-20)">↑</div><div></div>
+        <div class="btn" onclick="move(-20,0)">←</div><div class="btn" onclick="move(0,20)">↓</div><div class="btn" onclick="move(20,0)">→</div>
+    </div>
+    <div class="stats">
+        <div class="stat-box">定 <span class="stat-val" id="d">10</span></div>
+        <div class="stat-box">智 <span class="stat-val" id="w">10</span></div>
+        <div class="stat-box">福 <span class="stat-val" id="f">10</span></div>
+        <div class="stat-box">行 <span class="stat-val" id="x">10</span></div>
+    </div>
+    <div id="display-area">
+        <div id="dialogue"><b>【系統】</b> 歡迎來到普里禪寺。請控制角色走動。</div>
+        <div id="action-menu"></div>
+    </div>
+</div>
+
 <script>
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
 
-    // --- 圖片載入區 (請確保 GitHub 上的檔名與此完全一致) ---
+    // --- 圖片載入 ---
     const imgBoy = new Image(); imgBoy.src = 'boy.png';
     const imgNiche = new Image(); imgNiche.src = 'buddhist niche.png';
     const imgBurner = new Image(); imgBurner.src = 'incense burner.png';
     const imgFuton = new Image(); imgFuton.src = 'futon.png';
     const imgBookcase = new Image(); imgBookcase.src = 'bookcase.png';
-    
-    // 新增後山圖片 (請依照此名稱上傳圖片到 GitHub)
     const imgStandBuddha = new Image(); imgStandBuddha.src = 'stand_buddha.png';
     const imgGarden = new Image(); imgGarden.src = 'garden.png';
     const imgTree = new Image(); imgTree.src = 'tree.png';
 
-    let s = JSON.parse(localStorage.getItem('zen_final_v9')) || { d:10, w:10, f:10, x:10, lvl:"小男生" };
+    let s = JSON.parse(localStorage.getItem('zen_final_v10')) || { d:10, w:10, f:10, x:10, lvl:"小男生" };
     let player = { x: 150, y: 150 };
     let currentScene = 'world';
 
@@ -44,18 +87,13 @@
     function draw() {
         const sc = mapData[currentScene];
         document.getElementById('scene-title').innerText = "位置：" + sc.name;
-        
-        // 背景
         ctx.fillStyle = sc.bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // 畫物件
         sc.objs.forEach(obj => {
             if (obj.img && obj.img.complete && obj.img.naturalWidth !== 0) {
-                // 如果有圖片且載入成功，畫圖
                 ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
             } else {
-                // 沒圖片時的備援色塊
                 ctx.fillStyle = obj.color || "rgba(255,255,255,0.2)";
                 ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
             }
@@ -64,24 +102,56 @@
             ctx.fillText(obj.label, obj.x, obj.y - 5);
         });
 
-        // 畫主角
         if (imgBoy.complete && imgBoy.naturalWidth !== 0) {
             ctx.drawImage(imgBoy, player.x - 20, player.y - 45, 40, 50);
         } else {
             ctx.fillStyle = "#ffdbac";
             ctx.beginPath(); ctx.arc(player.x, player.y - 15, 10, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#888";
-            ctx.fillRect(player.x - 12, player.y - 5, 24, 20);
-        }
-        
-        // 門口提示
-        if(currentScene !== 'world') {
-            ctx.fillStyle = "rgba(255,255,255,0.2)";
-            ctx.fillRect(0, canvas.height-15, canvas.width, 15);
         }
     }
 
-    // ... (其餘 move, checkCollision, updateUI 函數保持不變) ...
-    // 記得在腳本最後加入定時重繪，確保圖片異步載入後會顯示
-    setInterval(draw, 500); 
-</script>
+    function move(dx, dy) {
+        player.x += dx; player.y += dy;
+        player.x = Math.max(15, Math.min(player.x, canvas.width-15));
+        
+        if (currentScene !== 'world' && player.y > canvas.height - 5) {
+            currentScene = 'world'; player.y = 150; 
+            document.getElementById('action-menu').innerHTML = "";
+            log("回到了院落。");
+        } else {
+            player.y = Math.max(15, Math.min(player.y, canvas.height-5));
+        }
+        checkCollision();
+        draw();
+    }
+
+    function checkCollision() {
+        const sc = mapData[currentScene];
+        let found = false;
+        sc.objs.forEach(obj => {
+            if (player.x > obj.x-25 && player.x < obj.x+obj.w+25 && player.y > obj.y-25 && player.y < obj.y+obj.h+25) {
+                showMenu(obj); found = true;
+            }
+        });
+        if(!found) {
+            document.getElementById('action-menu').innerHTML = "";
+            document.getElementById('action-menu').removeAttribute('data-active');
+        }
+    }
+
+    function showMenu(obj) {
+        const menu = document.getElementById('action-menu');
+        if(menu.getAttribute('data-active') === obj.type) return;
+        menu.innerHTML = "";
+        menu.setAttribute('data-active', obj.type);
+
+        let options = [];
+        if(obj.to) options.push({n: `進入${obj.label}`, fn: () => { currentScene=obj.to; player.y=canvas.height-40; updateUI(); draw(); }});
+        
+        if(obj.type === 'books' || obj.type === 'study') {
+            ["心經", "七週緣慈", "大悲咒", "楞嚴咒", "金剛經"].forEach(b => {
+                options.push({n: "誦持 "+b, fn: () => update('w', 5, `認真背誦《${b}》。`)});
+            });
+        }
+        if(obj.type === 'buddha') {
+            options
