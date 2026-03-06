@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>少年禪修錄 - 仙劍情境版</title>
+    <title>少年禪修錄 - 自製圖片版</title>
     <style>
         :root { --ink: #2C2C2C; --paper: #F2EFE9; --gold: #C5A059; --zen: #3D4F40; }
         body { margin: 0; background: #000; font-family: "PingFang TC", serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
@@ -16,7 +16,6 @@
         #dialogue { background: rgba(255,255,255,0.8); padding: 10px; border-radius: 8px; font-size: 15px; border: 1px solid #ddd; min-height: 40px; line-height: 1.4; }
         #action-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
         .menu-btn { background: var(--zen); color: white; border: none; padding: 12px 5px; border-radius: 5px; font-size: 14px; cursor: pointer; }
-        .menu-btn.bad { background: #A63D40; }
         .controls { position: absolute; right: 10px; top: -150px; display: grid; grid-template-columns: repeat(3, 48px); gap: 5px; }
         .btn { width: 48px; height: 48px; background: rgba(255,255,255,0.8); border: 1.5px solid #333; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; }
         #scene-title { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 12px; border-radius: 15px; font-size: 13px; }
@@ -39,7 +38,7 @@
         <div class="stat-box">行 <span class="stat-val" id="x">10</span></div>
     </div>
     <div id="display-area">
-        <div id="dialogue"><b>【引導】</b> 走近場景中的物件，會自動跳出修行選項。走到畫面最下方可離開建築。</div>
+        <div id="dialogue"><b>【系統】</b> 走近物件開始修行，走到畫面最下方可離開建築。</div>
         <div id="action-menu"></div>
     </div>
 </div>
@@ -47,7 +46,15 @@
 <script>
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
-    let s = JSON.parse(localStorage.getItem('zen_final_v7')) || { d:10, w:10, f:10, x:10, lvl:"小男生" };
+
+    // --- 圖片載入區 ---
+    const imgBoy = new Image(); imgBoy.src = 'boy.png';
+    const imgNiche = new Image(); imgNiche.src = 'buddhist niche.png';
+    const imgBurner = new Image(); imgBurner.src = 'incense burner.png';
+    const imgFuton = new Image(); imgFuton.src = 'futon.png';
+    const imgBookcase = new Image(); imgBookcase.src = 'bookcase.png';
+
+    let s = JSON.parse(localStorage.getItem('zen_final_v8')) || { d:10, w:10, f:10, x:10, lvl:"小男生" };
     let player = { x: 150, y: 150 };
     let currentScene = 'world';
 
@@ -58,14 +65,14 @@
             { x: 250, y: 160, w: 80, h: 70, color: '#225522', label: '後山', to: 'backhill' }
         ]},
         library: { bg: '#e5d5b5', name: '藏經閣', objs: [
-            { x: 50, y: 30, w: 30, h: 80, color: '#654321', label: '書櫃', type: 'books' },
+            { x: 50, y: 30, w: 40, h: 80, img: imgBookcase, label: '書櫃', type: 'books' },
             { x: 150, y: 80, w: 40, h: 25, color: '#8B4513', label: '書桌', type: 'study' }
         ]},
         temple: { bg: '#4a2211', name: '大雄寶殿', objs: [
-            { x: 150, y: 30, w: 60, h: 60, color: '#FFD700', label: '佛像', type: 'buddha' },
-            { x: 165, y: 100, w: 30, h: 20, color: '#C0C0C0', label: '香爐', type: 'incense' },
+            { x: 145, y: 30, w: 70, h: 70, img: imgNiche, label: '佛龕佛像', type: 'buddha' },
+            { x: 165, y: 105, w: 30, h: 25, img: imgBurner, label: '香爐', type: 'incense' },
             { x: 20, y: 20, w: 40, h: 40, color: '#ADD8E6', label: '窗戶', type: 'window' },
-            { x: 100, y: 140, w: 30, h: 10, color: '#C5A059', label: '蒲團', type: 'sit' }
+            { x: 100, y: 140, w: 30, h: 15, img: imgFuton, label: '蒲團', type: 'sit' }
         ]},
         backhill: { bg: '#3a5a3a', name: '後山', objs: [
             { x: 100, y: 30, w: 40, h: 70, color: '#FFD700', label: '站立佛像', type: 'stand_buddha' },
@@ -81,41 +88,41 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         sc.objs.forEach(obj => {
-            ctx.fillStyle = obj.color;
-            ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+            if (obj.img && obj.img.complete) {
+                ctx.drawImage(obj.img, obj.x, obj.y, obj.w, obj.h);
+            } else {
+                ctx.fillStyle = obj.color || "#666";
+                ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+            }
             ctx.fillStyle = "#fff";
-            ctx.font = "12px Arial";
             ctx.fillText(obj.label, obj.x, obj.y - 5);
         });
 
-        // 畫門口提示
+        // 畫主角
+        if (imgBoy.complete) {
+            ctx.drawImage(imgBoy, player.x - 20, player.y - 45, 40, 50);
+        } else {
+            ctx.fillStyle = "#ffdbac";
+            ctx.beginPath(); ctx.arc(player.x, player.y - 15, 10, 0, Math.PI*2); ctx.fill();
+        }
+        
         if(currentScene !== 'world') {
             ctx.fillStyle = "rgba(255,255,255,0.3)";
             ctx.fillRect(0, canvas.height-20, canvas.width, 20);
-            ctx.fillStyle = "#fff";
-            ctx.fillText("向下走離開建築", canvas.width/2-40, canvas.height-5);
         }
-
-        // 畫玩家
-        ctx.fillStyle = "#ffdbac";
-        ctx.beginPath(); ctx.arc(player.x, player.y - 15, 10, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = (s.lvl === "小男生") ? "#888" : "#C5A059";
-        ctx.fillRect(player.x - 12, player.y - 5, 24, 20);
     }
 
     function move(dx, dy) {
         player.x += dx; player.y += dy;
-        player.x = Math.max(10, Math.min(player.x, canvas.width-10));
+        player.x = Math.max(15, Math.min(player.x, canvas.width-15));
         
-        // 離開機制：走到下方邊界
-        if (currentScene !== 'world' && player.y > canvas.height - 10) {
+        if (currentScene !== 'world' && player.y > canvas.height - 5) {
             currentScene = 'world'; player.y = 150; 
             document.getElementById('action-menu').innerHTML = "";
             log("回到了院落。");
         } else {
-            player.y = Math.max(10, Math.min(player.y, canvas.height-5));
+            player.y = Math.max(15, Math.min(player.y, canvas.height-5));
         }
-
         checkCollision();
         draw();
     }
@@ -124,9 +131,8 @@
         const sc = mapData[currentScene];
         let found = false;
         sc.objs.forEach(obj => {
-            if (player.x > obj.x-20 && player.x < obj.x+obj.w+20 && player.y > obj.y-20 && player.y < obj.y+obj.h+20) {
-                showMenu(obj);
-                found = true;
+            if (player.x > obj.x-25 && player.x < obj.x+obj.w+25 && player.y > obj.y-25 && player.y < obj.y+obj.h+25) {
+                showMenu(obj); found = true;
             }
         });
         if(!found) document.getElementById('action-menu').innerHTML = "";
@@ -139,51 +145,35 @@
         menu.setAttribute('data-active', obj.type);
 
         let options = [];
-        if(obj.to) { options.push({n: `進入${obj.label}`, fn: () => { currentScene=obj.to; player.y=canvas.height-40; updateUI(); draw(); }}); }
+        if(obj.to) options.push({n: `進入${obj.label}`, fn: () => { currentScene=obj.to; player.y=canvas.height-40; updateUI(); draw(); }});
         
-        // 藏經閣邏輯
         if(obj.type === 'books' || obj.type === 'study') {
             ["心經", "七週緣慈", "大悲咒", "楞嚴咒", "金剛經"].forEach(b => {
                 options.push({n: "誦持 "+b, fn: () => studyEffect(b)});
             });
         }
-        // 大雄寶殿邏輯
         if(obj.type === 'buddha') {
-            options.push({n: "禮佛 (+10)", fn: () => update('d',10,'禮佛一拜，罪滅河沙。')});
-            options.push({n: "拜懺 (+10)", fn: () => update('d',10,'至誠懺悔，心清淨。')});
-            options.push({n: "擦佛像 (+5)", fn: () => update('f',5,'勤拭佛身，植福無量。')});
-            options.push({n: "哈哈大笑 (-5)", fn: () => update('d',-5,'殿內喧嘩，定力受損。', true)});
+            options.push({n: "禮佛 (+10)", fn: () => update('d',10,'禮佛一拜。')});
+            options.push({n: "拜懺 (+10)", fn: () => update('d',10,'至誠拜懺。')});
+            options.push({n: "擦佛像 (+5)", fn: () => update('f',5,'擦拭佛身。')});
+            options.push({n: "哈哈大笑 (-5)", fn: () => update('d',-5,'不可嬉鬧。', true)});
         }
         if(obj.type === 'incense') {
-            options.push({n: "整理香爐 (+5)", fn: () => update('f',5,'香爐莊嚴，心香一炷。')});
-            options.push({n: "上香 (+5)", fn: () => update('f',5,'虔誠供養，增長福德。')});
-        }
-        if(obj.type === 'window') {
-            options.push({n: "擦窗戶 (+5)", fn: () => update('f',5,'心窗明淨，勞作精進。')});
-            options.push({n: "滑手機 (-5)", fn: () => update('w',-5,'虛度光陰，智慧不長。', true)});
+            options.push({n: "整理香爐 (+5)", fn: () => update('f',5,'整理香爐。')});
+            options.push({n: "上香 (+5)", fn: () => update('f',5,'上香供養。')});
         }
         if(obj.type === 'sit') {
-            options.push({n: "打坐 (+10)", fn: () => update('d',10,'靜坐觀心，定力大增。')});
-            options.push({n: "翹腳 (-5)", fn: () => update('x',-5,'威儀不整，行持受扣。', true)});
-        }
-        // 後山邏輯
-        if(obj.type === 'stand_buddha') {
-            options.push({n: "洗佛像 (+10)", fn: () => update('f',10,'清淨佛身，當願眾生離垢。')});
+            options.push({n: "打坐 (+10)", fn: () => update('d',10,'靜坐觀心。')});
+            options.push({n: "翹腳 (-5)", fn: () => update('x',-5,'威儀不整。', true)});
         }
         if(obj.type === 'garden') {
-            options.push({n: "整理菜園 (+5)", fn: () => update('f',5,'惜福勞作，體驗農禪。')});
-            options.push({n: "澆水 (+5)", fn: () => update('f',5,'滋潤萬物。')});
-            options.push({n: "拔草 (+5)", fn: () => update('f',5,'剷除心中雜草。')});
-        }
-        if(obj.type === 'tree') {
-            options.push({n: "掃落葉 (+5)", fn: () => update('f',5,'日日掃除，不令塵積。')});
-            options.push({n: "樹下睡覺 (-5)", fn: () => update('x',-5,'精進不應偷懶。', true)});
-            options.push({n: "搶工具 (-5)", fn: () => update('x',-5,'慢心起，扣行持。', true)});
+            options.push({n: "整理菜園 (+5)", fn: () => update('f',5,'整理菜園。')});
+            options.push({n: "澆水 (+5)", fn: () => update('f',5,'澆水修行。')});
         }
 
         options.forEach(opt => {
             const b = document.createElement('button');
-            b.className = "menu-btn" + (opt.bad ? " bad" : "");
+            b.className = "menu-btn";
             b.innerText = opt.n;
             b.onclick = opt.fn;
             menu.appendChild(b);
@@ -192,16 +182,14 @@
 
     function studyEffect(name) {
         const r = Math.random();
-        if (r < 0.1) update('w', -5, `上課遲到！誦《${name}》因果受損。`, true);
-        else if (r < 0.4) update('w', 5, `認真背誦《${name}》，智慧提升。`);
-        else if (r < 0.5) update('w', 20, `考試全對！師父稱讚了你。`);
-        else if (r < 0.6) update('w', -10, `背經錯亂！心思雜亂受損。`, true);
-        else update('w', 5, `正在背讀《${name}》...`);
+        if (r < 0.1) update('w', -5, `上課遲到！`, true);
+        else if (r < 0.5) update('w', 5, `認真背誦《${name}》。`);
+        else update('w', 2, `背誦中...`);
     }
 
     function update(type, val, msg, isBad = false) {
         s[type] += val;
-        log(isBad ? `<span style="color:red">【負面】${msg}</span>` : `<b>【修行】</b>${msg}`);
+        log(isBad ? `<span style="color:red">【事件】${msg}</span>` : `<b>【修行】</b>${msg}`);
         updateUI();
     }
 
@@ -212,14 +200,7 @@
         document.getElementById('w').innerText = Math.floor(s.w);
         document.getElementById('f').innerText = Math.floor(s.f);
         document.getElementById('x').innerText = Math.floor(s.x);
-        
-        const max = Math.max(s.d, s.w, s.f, s.x);
-        if(max > 400) s.lvl = "總長";
-        else if(max > 200) s.lvl = "學長";
-        else if(max > 100) s.lvl = "研經班";
-        else if(max > 40) s.lvl = "中級班";
-        
-        localStorage.setItem('zen_final_v7', JSON.stringify(s));
+        localStorage.setItem('zen_final_v8', JSON.stringify(s));
     }
 
     function init() {
@@ -228,6 +209,8 @@
         draw();
     }
     window.addEventListener('resize', init);
+    // 每秒檢查一次圖片載入狀況並重繪，直到全部載入
+    const loader = setInterval(() => { draw(); if(imgBoy.complete) clearInterval(loader); }, 1000);
     init();
     updateUI();
 </script>
